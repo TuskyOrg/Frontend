@@ -1,0 +1,114 @@
+@page "/quizcreator"
+
+<h1>Quiz Creator</h1>
+
+<form>  
+Quiz Title: 
+<input type="text" name="QuizTitle" @bind="QuizTitle">  
+</form>  
+
+<ul>
+    @foreach (Question question in Questions)
+    {
+        <li>@question.Query</li>
+        @for(int i = 0; i < question.Answers.Count; i++)
+        { 
+            <li>Question @i @question.Answers[i].Text</li>
+        }
+    }
+</ul>
+
+@if(!addingQuestion)
+{
+    <button class="btn btn-primary" @onclick="AddQuestion">Add Question</button>
+}
+else
+{
+    <form>  
+    Question Query: 
+    <input type="text" name="Query" @bind="newQuery">  
+    </form>  
+
+    <button class="btn btn-primary" @onclick="SaveQuestion">Save Question</button>
+}
+
+<button class="btn btn-primary" @onclick="CreateQuiz">Create Quiz</button>
+
+
+@using System.Net;
+@using System.Text.Json;
+@using System.Text;
+@using System.IO;
+
+@code {
+  
+    private const string CreateQuizUrl = "http://localhost:8001/editor/quiz";
+    string QuizTitle { get; set; }
+
+    string newQuery { get; set; }
+
+    List<Question> Questions { get; set; } = new List<Question>();
+    
+    bool addingQuestion { get; set; }
+
+    Question newQuestion { get; set; }
+
+    public void CreateQuiz(){
+        WebRequest webRequest = WebRequest.Create(CreateQuizUrl);
+        webRequest.Method = "POST";
+    
+        webRequest.Headers.Add(HttpRequestHeader.Authorization, $"Bearer {UserSingleton.Instance().jwt.RawData}");
+      
+        Console.WriteLine("Raw Data: " + UserSingleton.Instance().jwt.RawData);
+
+        Console.WriteLine("Web Request: " + webRequest.Headers.ToString());
+
+        RequestQuiz quiz = new RequestQuiz()
+        {
+            title = QuizTitle,
+            owner = Int64.Parse(UserSingleton.Instance().jwt.Subject),
+            questions = Questions
+            
+        };
+
+        Questions.Clear();
+
+        string serializedQuiz = JsonSerializer.Serialize(quiz);
+
+        Console.WriteLine("Serialized Quiz: " + serializedQuiz);
+
+        byte[] byteArray = Encoding.UTF8.GetBytes(serializedQuiz);
+
+        Stream stream = webRequest.GetRequestStream();
+
+        stream.Write(byteArray, 0, byteArray.Length);
+        
+        using(WebResponse response = webRequest.GetResponse())
+        {
+            using var respStream = response.GetResponseStream();
+
+            using var reader = new StreamReader(respStream);
+            string data = reader.ReadToEnd();
+        
+        }
+     
+    }
+
+    public void AddQuestion(){
+        addingQuestion = true;
+    }
+
+     public void SaveQuestion(){
+         newQuestion = new Question(){
+            Query = newQuery
+         };
+        
+        Questions.Add(newQuestion);
+        newQuestion = null;
+        addingQuestion = false;
+    
+    }
+
+
+
+}

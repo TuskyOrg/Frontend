@@ -1,0 +1,115 @@
+@page "/register"
+
+<h1>Register</h1>
+
+<form>  
+Username:  
+<input type="text" name="Username" @bind="inputUsername">  
+<br> <br>  
+Password:  
+<input type="password" name="Password" @bind="inputPassword">  
+</form>  
+
+
+<button class="btn btn-primary" @onclick="RegisterUser">Register</button>
+
+<button class="btn btn-primary" @onclick="Login">Login</button>
+
+<p>Register Response: @webResponse</p>
+
+<p>Login Response: @loginText</p>
+
+<p>Token Text: @tokenText</p>
+
+<p>Error Text: @errorText</p>
+
+@using System.Net;
+@using System.Text.Json;
+@using System.Text;
+@using System.IO;
+@using System.IdentityModel.Tokens.Jwt;
+
+@code {
+    const string RegisterUrl = "http://localhost:8007/auth/register";
+
+    const string LoginUrl = "http://localhost:8007/auth/jwt/login";
+
+    private string inputUsername;
+    private string inputPassword;
+
+    private string webResponse = "";
+
+    private string loginText = "";
+
+    private string tokenText = "";
+
+    private string errorText = "";
+    private void RegisterUser()
+    {
+        errorText = "";
+
+        WebRequest webRequest = WebRequest.Create(RegisterUrl);
+        webRequest.Method = "POST";
+      
+
+        UserRegistration newRegistration = new UserRegistration(){
+            username = inputUsername,
+            password = inputPassword
+        };
+
+        string serializedUserRegistration = JsonSerializer.Serialize(newRegistration);
+
+        byte[] byteArray = Encoding.UTF8.GetBytes(serializedUserRegistration);
+
+        Stream stream = webRequest.GetRequestStream();
+
+        stream.Write(byteArray, 0, byteArray.Length);
+        
+        using(WebResponse response = webRequest.GetResponse())
+        {
+            webResponse = ((HttpWebResponse)response).StatusDescription;
+
+            using var respStream = response.GetResponseStream();
+
+            using var reader = new StreamReader(respStream);
+            string data = reader.ReadToEnd();
+        
+        }
+
+  
+    }
+
+    private void Login()
+    {
+        errorText = "";
+        var httpRequest = (HttpWebRequest)WebRequest.Create(LoginUrl);
+        httpRequest.Method = "POST";
+
+        httpRequest.ContentType = "application/x-www-form-urlencoded";
+
+        var data = $"grant_type=&username={inputUsername}&password={inputPassword}&scope=&client_id=&client_secret=";
+        try{
+            using (var streamWriter = new StreamWriter(httpRequest.GetRequestStream()))
+            {
+                streamWriter.Write(data);
+            }
+
+            var httpResponse = (HttpWebResponse)httpRequest.GetResponse();
+
+            LoginResponse loginResponse ; 
+            using (var streamReader = new StreamReader(httpResponse.GetResponseStream()))
+            {
+            var result = streamReader.ReadToEnd();
+            loginResponse = (LoginResponse)JsonSerializer.Deserialize(result, typeof(LoginResponse));
+            UserSingleton.Instance().jwt = new JwtSecurityTokenHandler().ReadJwtToken(loginResponse.access_token);
+            }
+
+            tokenText = UserSingleton.Instance().jwt.Subject;
+
+            loginText = httpResponse.StatusDescription;
+        }catch(Exception e){
+            errorText = e.Message;
+        }
+        
+    }
+}

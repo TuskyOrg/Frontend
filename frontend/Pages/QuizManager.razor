@@ -1,0 +1,68 @@
+@page "/quizmanager"
+
+<h1>Quiz Manager</h1>
+
+<button class="btn btn-primary" @onclick="ShowQuizzes">Show Quizzes</button>
+
+<button class="btn btn-primary" @onclick="SaveQuiz">Save Quiz</button>
+
+
+<ul>
+    @foreach (var quizPreview in QuizPreviews)
+    {
+        <li>@quizPreview.title</li>
+    }
+</ul>
+
+@using System.Net;
+@using System.Text.Json;
+@using System.Text;
+@using System.IO;
+
+@code {
+   private const string PreviewUrl = "http://localhost:8001/editor/quiz-titles";
+
+  
+
+   private List<ResponseQuiz> QuizPreviews = new List<ResponseQuiz>();
+
+    public void ShowQuizzes(){
+        HttpWebRequest httpRequest = (HttpWebRequest)WebRequest.Create(PreviewUrl);
+        httpRequest.Method = "GET";
+        httpRequest.Headers.Add(HttpRequestHeader.Accept, "application/json");
+
+        httpRequest.Headers.Add(HttpRequestHeader.Authorization, $"Bearer {UserSingleton.Instance().jwt.RawData}");
+
+        string data;
+
+        using( var webResponse = httpRequest.GetResponse()){
+            using( var webStream = webResponse.GetResponseStream())
+            {
+                using(var reader = new StreamReader(webStream))
+                {
+                    data = reader.ReadToEnd();
+                }
+            }
+        }  
+
+        List<ResponseQuiz> quizzes =JsonSerializer.Deserialize<List<ResponseQuiz>>(data);
+          
+
+        QuizPreviews.Clear();
+       foreach(ResponseQuiz quiz in quizzes)
+       {
+            QuizPreviews.Add(quiz);
+       }
+   
+    }
+
+    
+
+    public void SaveQuiz(){
+
+       
+    }
+
+
+
+}
