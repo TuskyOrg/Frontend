@@ -75,8 +75,6 @@ else
 
         string serializedQuiz = JsonSerializer.Serialize(quiz);
 
-        Console.WriteLine("Serialized Quiz: " + serializedQuiz);
-
         byte[] byteArray = Encoding.UTF8.GetBytes(serializedQuiz);
 
         Stream stream = webRequest.GetRequestStream();
