@@ -8,7 +8,11 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-
+using Microsoft.AspNetCore.Components.Authorization;
+using frontend.Shared;
+using frontend.Networking;
+using System.Net.Http;
+using Blazored.LocalStorage;
 
 namespace frontend
 {
@@ -27,6 +31,16 @@ namespace frontend
         {
             services.AddRazorPages();
             services.AddServerSideBlazor();
+            services.AddScoped<AuthenticationStateProvider, TuskyAuthStateProvider>();
+            services.AddScoped<IAuthenticationService, AuthenticationService>();
+            services.AddBlazoredLocalStorage();
+            services.AddScoped(sp => new HttpClient 
+			{ 
+				BaseAddress = new Uri("http://localhost:8007/auth/register"),
+                 
+			});
+            services.AddOptions();
+            services.AddAuthorizationCore();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
